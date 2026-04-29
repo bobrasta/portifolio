@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bobtem — Hardware · Firmware · Software</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080A0F;
+    --bg2: #0D1117;
+    --green: #00FF88;
+    --green2: #00CC6A;
+    --orange: #FF6B2B;
+    --dim: #1A1F2E;
+    --border: rgba(0,255,136,0.15);
+    --text: #E8EDF5;
+    --muted: #5A6478;
+    --mono: 'Space Mono', monospace;
+    --display: 'Syne', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-weight: 300;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    position: fixed;
+    top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.1s;
+    mix-blend-mode: screen;
+  }
+  .cursor-ring {
+    width: 32px; height: 32px;
+    border: 1px solid rgba(0,255,136,0.4);
+    border-radius: 50%;
+    position: fixed;
+    top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9998;
+    transition: transform 0.18s ease, width 0.2s, height 0.2s;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 4rem;
+    background: linear-gradient(to bottom, rgba(8,10,15,0.95), transparent);
+    backdrop-filter: blur(4px);
+  }
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--green);
+    letter-spacing: 0.15em;
+    text-decoration: none;
+  }
+  .nav-links {
+    display: flex;
+    gap: 2.5rem;
+    list-style: none;
+  }
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--green); }
+
+  /* HERO */
+  #hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(0,255,136,0.08) 0%, transparent 70%);
+    top: 50%; left: 60%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .hero-tag {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--green);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s forwards;
+  }
+
+  .hero-name {
+    font-family: var(--display);
+    font-size: clamp(3.5rem, 8vw, 8rem);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.4s forwards;
+  }
+  .hero-name span { color: var(--green); }
+
+  .hero-title {
+    font-family: var(--display);
+    font-size: clamp(1rem, 2.5vw, 1.5rem);
+    font-weight: 400;
+    color: var(--muted);
+    max-width: 600px;
+    line-height: 1.6;
+    margin-bottom: 3rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.6s forwards;
+  }
+  .hero-title strong { color: var(--text); font-weight: 600; }
+
+  .hero-cta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.8s forwards;
+  }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.9rem 2rem;
+    border-radius: 2px;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: none;
+  }
+  .btn-primary {
+    background: var(--green);
+    color: #000;
+    font-weight: 700;
+  }
+  .btn-primary:hover { background: var(--green2); transform: translateY(-2px); }
+  .btn-outline {
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-outline:hover { border-color: var(--green); color: var(--green); transform: translateY(-2px); }
+
+  .hero-scroll {
+    position: absolute;
+    bottom: 3rem;
+    left: 4rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 1.2s forwards;
+  }
+  .hero-scroll::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 1px;
+    background: var(--muted);
+    animation: expandLine 1s 1.5s forwards;
+    transform-origin: left;
+    transform: scaleX(0);
+  }
+
+  .hero-location {
+    position: absolute;
+    bottom: 3rem;
+    right: 4rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    opacity: 0;
+    animation: fadeUp 0.6s 1.2s forwards;
+  }
+  .hero-location span { color: var(--green); }
+
+  /* SECTION COMMON */
+  section {
+    padding: 7rem 4rem;
+    position: relative;
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--green);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .section-label::before {
+    content: '';
+    display: block;
+    width: 30px;
+    height: 1px;
+    background: var(--green);
+  }
+  .section-title {
+    font-family: var(--display);
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+  }
+
+  /* SKILLS */
+  #skills { background: var(--bg2); }
+
+  .skills-intro {
+    max-width: 700px;
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 4rem;
+    font-size: 1.05rem;
+  }
+
+  .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .skill-card {
+    background: var(--bg2);
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
+  }
+  .skill-card:hover { background: var(--dim); }
+  .skill-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--green);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .skill-card:hover::before { transform: scaleX(1); }
+
+  .skill-icon {
+    font-size: 1.8rem;
+    margin-bottom: 1.2rem;
+    display: block;
+  }
+  .skill-name {
+    font-family: var(--display);
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.8rem;
+  }
+  .skill-desc {
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 1.2rem;
+  }
+  .skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .tag {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    padding: 0.25rem 0.6rem;
+    background: rgba(0,255,136,0.08);
+    color: var(--green);
+    border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  /* PROJECTS */
+  #projects { background: var(--bg); }
+
+  .projects-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1.5rem;
+    margin-top: 4rem;
+  }
+
+  .project-card {
+    background: var(--dim);
+    border: 1px solid var(--border);
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, transform 0.3s;
+    cursor: none;
+  }
+  .project-card:hover {
+    border-color: rgba(0,255,136,0.4);
+    transform: translateY(-4px);
+  }
+  .project-card.featured { grid-column: span 7; }
+  .project-card.secondary { grid-column: span 5; }
+  .project-card.full { grid-column: span 12; }
+  .project-card.half { grid-column: span 6; }
+
+  .project-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,255,136,0.04) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .project-card:hover::after { opacity: 1; }
+
+  .project-num {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    margin-bottom: 1.5rem;
+  }
+  .project-name {
+    font-family: var(--display);
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 0.8rem;
+    letter-spacing: -0.02em;
+  }
+  .project-name span { color: var(--green); }
+  .project-desc {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.75;
+    margin-bottom: 1.5rem;
+  }
+  .project-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.5rem;
+  }
+  .project-link {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--green);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: gap 0.2s;
+  }
+  .project-link:hover { gap: 0.8rem; }
+  .project-badge {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    padding: 0.3rem 0.7rem;
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.3);
+    color: var(--green);
+    border-radius: 20px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* SERVICES */
+  #services { background: var(--bg2); }
+
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 4rem;
+  }
+
+  .service-card {
+    border: 1px solid var(--border);
+    padding: 2.5rem;
+    position: relative;
+    transition: border-color 0.3s;
+  }
+  .service-card:hover { border-color: rgba(0,255,136,0.4); }
+
+  .service-num {
+    font-family: var(--mono);
+    font-size: 3rem;
+    font-weight: 700;
+    color: rgba(0,255,136,0.08);
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    line-height: 1;
+  }
+  .service-name {
+    font-family: var(--display);
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.8rem;
+  }
+  .service-desc {
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.75;
+    margin-bottom: 1.5rem;
+  }
+  .service-price {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--green);
+  }
+
+  /* CONTACT */
+  #contact {
+    background: var(--bg);
+    text-align: center;
+    padding: 8rem 4rem;
+  }
+
+  .contact-inner {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  .contact-title {
+    font-family: var(--display);
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+  }
+  .contact-title span { color: var(--green); }
+  .contact-sub {
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.8;
+    margin-bottom: 3rem;
+  }
+  .contact-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 4rem;
+  }
+  .contact-link {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 1rem 2rem;
+    border: 1px solid var(--border);
+    color: var(--text);
+    text-decoration: none;
+    transition: all 0.2s;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .contact-link:hover {
+    border-color: var(--green);
+    color: var(--green);
+    transform: translateY(-2px);
+  }
+  .contact-link.primary {
+    background: var(--green);
+    color: #000;
+    border-color: var(--green);
+    font-weight: 700;
+  }
+  .contact-link.primary:hover {
+    background: var(--green2);
+    color: #000;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  footer p {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+  footer span { color: var(--green); }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes expandLine {
+    to { transform: scaleX(1); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* DIVIDER */
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border), transparent);
+    margin: 0;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    nav { padding: 1.2rem 1.5rem; }
+    .nav-links { display: none; }
+    section { padding: 5rem 1.5rem; }
+    #hero { padding: 0 1.5rem; }
+    .hero-scroll, .hero-location { display: none; }
+    .project-card.featured,
+    .project-card.secondary,
+    .project-card.half { grid-column: span 12; }
+    footer { padding: 1.5rem; flex-direction: column; gap: 0.5rem; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">// BOBTEM</a>
+  <ul class="nav-links">
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#projects">Projects</a></li>
+    <li><a href="#services">Services</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="hero-glow"></div>
+
+  <div class="hero-tag">// Available for projects · Dar es Salaam, Tanzania</div>
+  <h1 class="hero-name">
+    Full‑Stack<br><span>IoT</span><br>Engineer
+  </h1>
+  <p class="hero-title">
+    I design the <strong>hardware</strong>, write the <strong>firmware</strong>,<br>
+    build the <strong>web backend</strong>, and ship the <strong>mobile app</strong>.<br>
+    One engineer. Complete solutions.
+  </p>
+  <div class="hero-cta">
+    <a href="#projects" class="btn btn-primary">View Projects</a>
+    <a href="#contact" class="btn btn-outline">Hire Me</a>
+  </div>
+
+  <div class="hero-scroll">Scroll to explore</div>
+  <div class="hero-location"><span>●</span> DAR ES SALAAM · TZ</div>
+</section>
+
+<div class="divider"></div>
+
+<!-- SKILLS -->
+<section id="skills">
+  <div class="section-label">What I do</div>
+  <h2 class="section-title reveal">A rare combination<br>of skills</h2>
+  <p class="skills-intro reveal">
+    Most engineers specialize in one layer. I work across all of them —
+    from bare-metal microcontroller code to cloud APIs to polished mobile interfaces.
+    This means faster delivery, lower cost, and no gaps between teams.
+  </p>
+
+  <div class="skills-grid">
+    <div class="skill-card reveal">
+      <span class="skill-icon">⚡</span>
+      <div class="skill-name">Electronics & PCB Design</div>
+      <p class="skill-desc">Custom circuit design and PCB layout using EasyEDA. From schematics to production-ready Gerber files.</p>
+      <div class="skill-tags">
+        <span class="tag">EasyEDA</span>
+        <span class="tag">PCB Layout</span>
+        <span class="tag">Schematics</span>
+        <span class="tag">Power Electronics</span>
+        <span class="tag">VFD Design</span>
+      </div>
+    </div>
+
+    <div class="skill-card reveal">
+      <span class="skill-icon">🔧</span>
+      <div class="skill-name">Firmware & Embedded</div>
+      <p class="skill-desc">Microcontroller programming for STM32, AVR, and ESP32. Real-time control systems, motor control, and sensor interfacing.</p>
+      <div class="skill-tags">
+        <span class="tag">STM32</span>
+        <span class="tag">C/C++</span>
+        <span class="tag">RTOS</span>
+        <span class="tag">BLDC Control</span>
+        <span class="tag">UART/SPI/I2C</span>
+      </div>
+    </div>
+
+    <div class="skill-card reveal">
+      <span class="skill-icon">🌐</span>
+      <div class="skill-name">Full-Stack Web</div>
+      <p class="skill-desc">End-to-end web applications with PHP backends, MySQL databases, and responsive frontends. Built for real business operations.</p>
+      <div class="skill-tags">
+        <span class="tag">PHP</span>
+        <span class="tag">MySQL</span>
+        <span class="tag">JavaScript</span>
+        <span class="tag">HTML/CSS</span>
+        <span class="tag">REST APIs</span>
+      </div>
+    </div>
+
+    <div class="skill-card reveal">
+      <span class="skill-icon">📱</span>
+      <div class="skill-name">Mobile App Development</div>
+      <p class="skill-desc">Cross-platform mobile apps with Flutter. Specialized in hardware-connected apps via BLE, MQTT, and GPS tracking.</p>
+      <div class="skill-tags">
+        <span class="tag">Flutter</span>
+        <span class="tag">Dart</span>
+        <span class="tag">BLE</span>
+        <span class="tag">MQTT</span>
+        <span class="tag">GPS Tracking</span>
+      </div>
+    </div>
+
+    <div class="skill-card reveal">
+      <span class="skill-icon">📡</span>
+      <div class="skill-name">Telecommunications</div>
+      <p class="skill-desc">Network design and telecoms engineering background. GSM/GPRS module integration, antenna design, and wireless protocols.</p>
+      <div class="skill-tags">
+        <span class="tag">GSM/GPRS</span>
+        <span class="tag">SIM800L</span>
+        <span class="tag">NMEA GPS</span>
+        <span class="tag">LoRa</span>
+        <span class="tag">RF Design</span>
+      </div>
+    </div>
+
+    <div class="skill-card reveal">
+      <span class="skill-icon">☁️</span>
+      <div class="skill-name">IoT Systems</div>
+      <p class="skill-desc">Complete IoT pipelines from sensor to dashboard. Fleet tracking, remote monitoring, and real-time data systems.</p>
+      <div class="skill-tags">
+        <span class="tag">Fleet Tracking</span>
+        <span class="tag">MySQL</span>
+        <span class="tag">AJAX</span>
+        <span class="tag">Chart.js</span>
+        <span class="tag">WordPress</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PROJECTS -->
+<section id="projects">
+  <div class="section-label">Work</div>
+  <h2 class="section-title reveal">Selected Projects</h2>
+
+  <div class="projects-grid">
+
+    <div class="project-card featured reveal">
+      <div class="project-badge">Featured</div>
+      <div class="project-num">01 — Green Wheels EV Management</div>
+      <div class="project-name"><span>Green</span>Wheels</div>
+      <p class="project-desc">
+        A complete business management system for an electric motorcycle company in Dar es Salaam.
+        Covers inventory, sales, expenses, accounting, and GPS fleet tracking with a dark-themed dashboard UI.
+        Built from scratch to production — PHP/MySQL backend, Chart.js analytics, real-time AJAX updates.
+      </p>
+      <div class="project-stack">
+        <span class="tag">PHP</span>
+        <span class="tag">MySQL</span>
+        <span class="tag">JavaScript</span>
+        <span class="tag">Chart.js</span>
+        <span class="tag">GPS Tracking</span>
+        <span class="tag">WordPress</span>
+        <span class="tag">Fleet Mgmt</span>
+      </div>
+      <a href="#contact" class="project-link">View details →</a>
+    </div>
+
+    <div class="project-card secondary reveal">
+      <div class="project-num">02 — Motor Control Hardware</div>
+      <div class="project-name">VFD <span>Controller</span></div>
+      <p class="project-desc">
+        A commercial Variable Frequency Drive controller targeting synchronous AC, servo, and BLDC motors from a single hardware platform.
+        Designed with STM32G4, TLP5214A gate drivers, DESAT protection, and Active Miller Clamp.
+      </p>
+      <div class="project-stack">
+        <span class="tag">STM32G4</span>
+        <span class="tag">EasyEDA</span>
+        <span class="tag">Gate Drivers</span>
+        <span class="tag">BLDC</span>
+        <span class="tag">Power Electronics</span>
+      </div>
+      <a href="#contact" class="project-link">View details →</a>
+    </div>
+
+    <div class="project-card half reveal">
+      <div class="project-num">03 — Fleet Tracking</div>
+      <div class="project-name">GPS <span>Fleet</span></div>
+      <p class="project-desc">
+        WordPress-based fleet management system with custom session authentication, real-time GPS tracking via NMEA protocol, and full IMEI device management with FK cascade constraints.
+      </p>
+      <div class="project-stack">
+        <span class="tag">WordPress</span>
+        <span class="tag">PHP</span>
+        <span class="tag">NMEA GPS</span>
+        <span class="tag">MySQL</span>
+      </div>
+      <a href="#contact" class="project-link">View details →</a>
+    </div>
+
+    <div class="project-card half reveal">
+      <div class="project-num">04 — SaaS Platform</div>
+      <div class="project-name">GW <span>SaaS</span></div>
+      <p class="project-desc">
+        Turning Green Wheels into a multi-tenant SaaS platform for EV motorcycle businesses across East Africa.
+        Schema-per-tenant architecture, mobile money payments, and tiered subscription plans.
+      </p>
+      <div class="project-stack">
+        <span class="tag">PHP</span>
+        <span class="tag">Multi-tenant</span>
+        <span class="tag">M-Pesa</span>
+        <span class="tag">Railway</span>
+      </div>
+      <a href="#contact" class="project-link">In progress →</a>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- SERVICES -->
+<section id="services">
+  <div class="section-label">Services</div>
+  <h2 class="section-title reveal">What I build<br>for clients</h2>
+
+  <div class="services-grid">
+    <div class="service-card reveal">
+      <div class="service-num">01</div>
+      <div class="service-name">Complete IoT Systems</div>
+      <p class="service-desc">From PCB design and firmware through to cloud backend and mobile app. One engineer, no handoff delays, full ownership of the stack.</p>
+      <div class="service-price">From $3,000 · Project-based</div>
+    </div>
+
+    <div class="service-card reveal">
+      <div class="service-num">02</div>
+      <div class="service-name">Flutter Mobile Apps</div>
+      <p class="service-desc">Cross-platform mobile applications with a focus on hardware connectivity — BLE, MQTT, GPS, and real-time data dashboards.</p>
+      <div class="service-price">From $800 · Project-based</div>
+    </div>
+
+    <div class="service-card reveal">
+      <div class="service-num">03</div>
+      <div class="service-name">PCB Design</div>
+      <p class="service-desc">Custom electronics design using EasyEDA. Schematics, PCB layout, BOM, and Gerber files ready for manufacturing.</p>
+      <div class="service-price">From $300 · Project-based</div>
+    </div>
+
+    <div class="service-card reveal">
+      <div class="service-num">04</div>
+      <div class="service-name">Web Management Systems</div>
+      <p class="service-desc">Business management systems: inventory, sales, fleet tracking, accounting. PHP/MySQL with clean dashboards and reporting.</p>
+      <div class="service-price">From $500 · Project-based</div>
+    </div>
+
+    <div class="service-card reveal">
+      <div class="service-num">05</div>
+      <div class="service-name">Firmware Development</div>
+      <p class="service-desc">Microcontroller programming for STM32, ESP32, AVR. Motor control, sensor interfacing, communication protocols, and RTOS integration.</p>
+      <div class="service-price">From $400 · Project-based</div>
+    </div>
+
+    <div class="service-card reveal">
+      <div class="service-num">06</div>
+      <div class="service-name">Technical Consulting</div>
+      <p class="service-desc">Architecture review, technology selection, and feasibility studies for hardware+software projects. Hourly or retainer basis.</p>
+      <div class="service-price">$40/hr · Retainer available</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="contact-inner">
+    <div class="section-label" style="justify-content:center">Let's work together</div>
+    <h2 class="contact-title reveal">Have a project<br>in <span>mind?</span></h2>
+    <p class="contact-sub reveal">
+      Based in Dar es Salaam. Available for remote projects worldwide
+      and on-site work across East Africa.
+    </p>
+    <div class="contact-links reveal">
+      <a href="https://wa.me/255625697863" class="contact-link primary" target="_blank">
+        💬 WhatsApp Me
+      </a>
+      <a href="mailto:tech@greenwheels.tz" class="contact-link">
+        ✉ Email
+      </a>
+      <a href="https://upwork.com" class="contact-link" target="_blank">
+        💼 Upwork
+      </a>
+      <a href="https://fiverr.com" class="contact-link" target="_blank">
+        ⚡ Fiverr
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2025 <span>Bobtem</span> · Dar es Salaam, Tanzania</p>
+  <p>Built with <span>HTML · CSS · JS</span> · Hosted on Railway</p>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.transform = `translate(${mx - 4}px, ${my - 4}px)`;
+  });
+
+  function animRing() {
+    rx += (mx - rx) * 0.12;
+    ry += (my - ry) * 0.12;
+    ring.style.transform = `translate(${rx - 16}px, ${ry - 16}px)`;
+    requestAnimationFrame(animRing);
+  }
+  animRing();
+
+  document.querySelectorAll('a, button').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      ring.style.width = '48px';
+      ring.style.height = '48px';
+      ring.style.borderColor = 'rgba(0,255,136,0.7)';
+    });
+    el.addEventListener('mouseleave', () => {
+      ring.style.width = '32px';
+      ring.style.height = '32px';
+      ring.style.borderColor = 'rgba(0,255,136,0.4)';
+    });
+  });
+
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  reveals.forEach(el => observer.observe(el));
+
+  // Nav active state
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-links a');
+
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 200) current = s.id;
+    });
+    navLinks.forEach(a => {
+      a.style.color = a.getAttribute('href') === '#' + current
+        ? 'var(--green)' : '';
+    });
+  });
+</script>
+</body>
+</html>
